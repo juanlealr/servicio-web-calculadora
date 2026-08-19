@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- Nombre del archivo activo -->
+        <file>logs/errores_calculadora.json</file>
+        
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Crea un archivo nuevo cada día -->
+            <fileNamePattern>logs/errores_calculadora-%d{yyyy-MM-dd}.json</fileNamePattern>
+            <!-- Guarda máximo 8 días de historial, luego elimina los viejos -->
+            <maxHistory>8</maxHistory>
+        </rollingPolicy>
+
+        <!-- Formatea la salida a JSON puro -->
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder" />
+    </appender>
+
+    <!-- Solo usamos el appender del archivo, desactivando la consola -->
+    <root level="INFO">
+        <appender-ref ref="JSON_FILE" />
+    </root>
+</configuration>

@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Archivos generados por la aplicación
+historial_operaciones.txt
+logs/

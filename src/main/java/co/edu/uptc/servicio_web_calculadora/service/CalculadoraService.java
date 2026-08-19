@@ -1,16 +1,20 @@
 package co.edu.uptc.servicio_web_calculadora.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import co.edu.uptc.servicio_web_calculadora.exception.DivisionByZeroException;
+import co.edu.uptc.servicio_web_calculadora.exception.InvalidOperatorException;
 import co.edu.uptc.servicio_web_calculadora.model.Operacion;
 import co.edu.uptc.servicio_web_calculadora.repository.ArchivoRepository;
 
 @Service
 public class CalculadoraService {
 
-    @Autowired
-    private ArchivoRepository archivoRepository;
+    private final ArchivoRepository archivoRepository;
+    
+    public CalculadoraService(ArchivoRepository archivoRepository) {
+        this.archivoRepository = archivoRepository;
+    }
     
     public double realizarOperacion(double num1, double num2, String operador){
 
@@ -31,13 +35,13 @@ public class CalculadoraService {
 
             case "division":
                 if (num2 == 0) {
-                    throw new IllegalArgumentException("Error: No se puede dividir por 0.");
+                    throw new DivisionByZeroException("Error: No se puede dividir por 0.");
                 }
                 resultado = num1 / num2;
                 break;
         
             default:
-                throw new IllegalArgumentException("Error: Operación no válida. Usa suma, resta, multiplicacion o division.");
+                throw new InvalidOperatorException("Error: Operación no válida. Usa suma, resta, multiplicacion o division.");
         
         }
         
