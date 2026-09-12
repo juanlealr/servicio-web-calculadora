@@ -35,3 +35,4 @@ build/
 # Archivos generados por la aplicación
 historial_operaciones.txt
 logs/
+personas.csv

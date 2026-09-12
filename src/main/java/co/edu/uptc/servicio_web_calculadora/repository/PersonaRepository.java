@@ -1,15 +1,18 @@
 package co.edu.uptc.servicio_web_calculadora.repository;
 
-import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Iterator;
+import java.util.stream.Stream;
 
 import org.springframework.stereotype.Repository;
-
-import co.edu.uptc.servicio_web_calculadora.dto.PersonaDTO;
 
 @Repository
 public class PersonaRepository {
@@ -22,39 +25,47 @@ public class PersonaRepository {
         return "personas.csv";
     }
 
-    public List<PersonaDTO> obtenerTodas() {
-        List<PersonaDTO> personas = new ArrayList<>();
-        String ruta = obtenerRutaArchivo();
-        File archivo = new File(ruta);
+    public void transmitirTodasLasPersonas(OutputStream outputStream) throws IOException {
+        Path path = Paths.get(obtenerRutaArchivo());
 
-        if (!archivo.exists()) {
-            System.err.println("El archivo CSV no existe en la ruta: " + ruta);
-            return personas;
+        if (!Files.exists(path)) {
+            outputStream.write("[]".getBytes(StandardCharsets.UTF_8));
+            return;
         }
 
-        try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
-            String linea;
-            boolean esPrimeraLinea = true;
+        // Usamos BufferedWriter para transmitir por bloques directamente al cable de
+        // red
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8));
+                Stream<String> lines = Files.lines(path)) {
 
-            while ((linea = br.readLine()) != null) {
-                if (esPrimeraLinea && (linea.toLowerCase().contains("id") || linea.toLowerCase().contains("nombre"))) {
-                    esPrimeraLinea = false;
-                    continue;
-                }
-                esPrimeraLinea = false;
+            writer.write("[\n"); // Inicio del arreglo JSON
 
+            Iterator<String> iterator = lines.skip(1).iterator(); // Omitir encabezado
+            boolean primeraLinea = true;
+
+            while (iterator.hasNext()) {
+                String linea = iterator.next();
                 if (linea.trim().isEmpty())
                     continue;
 
                 String[] datos = linea.split(",");
                 if (datos.length >= 3) {
-                    personas.add(new PersonaDTO(datos[0].trim(), datos[1].trim(), datos[2].trim()));
+                    if (!primeraLinea) {
+                        writer.write(",\n");
+                    }
+
+                    // Escribir directamente el JSON de cada persona
+                    String jsonPersona = String.format(
+                            "{\"id\":\"%s\",\"nombre\":\"%s\",\"apellido\":\"%s\"}",
+                            datos[0].trim(), datos[1].trim(), datos[2].trim());
+
+                    writer.write(jsonPersona);
+                    primeraLinea = false;
                 }
             }
-        } catch (IOException e) {
-            System.err.println("Error al leer el archivo CSV: " + e.getMessage());
-        }
 
-        return personas;
+            writer.write("\n]"); // Fin del arreglo JSON
+            writer.flush(); // Asegura el envío de los últimos datos
+        }
     }
 }
