@@ -34,6 +34,24 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(mensaje, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(InvalidPaginationException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidPagination(InvalidPaginationException ex) {
+        logger.error("Error de paginación: {}", ex.getMessage());
+        return buildErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(PersonaNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handlePersonaNotFound(PersonaNotFoundException ex) {
+        logger.error("Registro no encontrado: {}", ex.getMessage());
+        return buildErrorResponse(ex.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(InvalidPersonaDataException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidPersonaData(InvalidPersonaDataException ex) {
+        logger.error("Datos inválidos: {}", ex.getMessage());
+        return buildErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
     private ResponseEntity<ErrorResponse> buildErrorResponse(String message, HttpStatus status) {
         ErrorResponse errorResponse = new ErrorResponse(message, status.value());
         return new ResponseEntity<>(errorResponse, status);

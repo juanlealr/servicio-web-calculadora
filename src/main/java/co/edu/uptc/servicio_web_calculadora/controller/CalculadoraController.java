@@ -1,15 +1,17 @@
 package co.edu.uptc.servicio_web_calculadora.controller;
 
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import java.io.IOException;
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import co.edu.uptc.servicio_web_calculadora.dto.OperacionResponseDTO;
+import co.edu.uptc.servicio_web_calculadora.dto.PaginaResponseDTO;
 import co.edu.uptc.servicio_web_calculadora.service.CalculadoraService;
 import co.edu.uptc.servicio_web_calculadora.service.PersonaService;
 
@@ -25,7 +27,6 @@ public class CalculadoraController {
         this.personaService = personaService;
     }
 
-    // Endpoint de la calculadora...
     @GetMapping("/calcular")
     public ResponseEntity<OperacionResponseDTO> procesarCalculo(
             @RequestParam double num1,
@@ -38,15 +39,39 @@ public class CalculadoraController {
         return ResponseEntity.ok(new OperacionResponseDTO(num1, num2, operador, resultado, mensaje));
     }
 
-    @GetMapping(value = "/personas", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<StreamingResponseBody> obtenerPersonas() {
-        // Le indicamos a Spring que transmita los datos en flujo continuo
-        StreamingResponseBody stream = outputStream -> {
-            personaService.transmitirPersonas(outputStream);
-        };
+    @GetMapping(value = "/personas")
+    public ResponseEntity<PaginaResponseDTO> obtenerPersonasPaginadas(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "100") int size) throws IOException {
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"personas.json\"")
-                .body(stream);
+        PaginaResponseDTO respuesta = personaService.obtenerPagina(page, size);
+        return ResponseEntity.ok(respuesta);
+    }
+
+    @PutMapping(value = "/personas/editar")
+    public ResponseEntity<Object> editarPersona(
+            @RequestParam String id,
+            @RequestParam String nombre,
+            @RequestParam String apellido) throws IOException {
+
+        String regexLetras = "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$";
+
+        if (!nombre.matches(regexLetras) || !apellido.matches(regexLetras)) {
+            throw new co.edu.uptc.servicio_web_calculadora.exception.InvalidPersonaDataException(
+                    "El nombre y el apellido solo pueden contener letras y espacios.");
+        }
+
+        boolean editado = personaService.editarPersona(id, nombre, apellido);
+
+        if (!editado) {
+            throw new co.edu.uptc.servicio_web_calculadora.exception.PersonaNotFoundException(
+                    "No se encontró un registro con el ID especificado: " + id);
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "mensaje", "Registro actualizado correctamente",
+                "id", id,
+                "nuevoNombre", nombre,
+                "nuevoApellido", apellido));
     }
 }
