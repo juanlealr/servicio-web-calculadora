@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,26 +31,34 @@ public class PersonaRepository {
         return "personas.csv";
     }
 
-    // 1. Método para obtener una página específica
     public PaginaResponseDTO obtenerPaginaPersonas(int page, int size) throws IOException {
         Path path = Paths.get(obtenerRutaArchivo());
 
+        // Obtener ID, Nombre e IP del contenedor que atiende la petición
+        String contenedorId = System.getenv().getOrDefault("HOSTNAME", "Desconocido");
+        String contenedorNombre = System.getenv().getOrDefault("CONTAINER_NAME", contenedorId);
+        String contenedorIp = "Desconocida";
+
+        try {
+            contenedorIp = InetAddress.getLocalHost().getHostAddress();
+        } catch (UnknownHostException ignored) {
+        }
+
         if (!Files.exists(path)) {
-            return new PaginaResponseDTO(0, 0, page, 0, new ArrayList<>());
+            return new PaginaResponseDTO(0, 0, page, 0, contenedorId, contenedorNombre, contenedorIp,
+                    new ArrayList<>());
         }
 
         long totalRegistros = 0;
 
-        // Contar el total de líneas (rápido gracias a los Streams)
         try (Stream<String> lines = Files.lines(path, StandardCharsets.UTF_8)) {
-            totalRegistros = lines.count() - 1; // Restamos el encabezado
+            totalRegistros = lines.count() - 1;
         }
 
         List<PersonaDTO> personasPagina = new ArrayList<>();
         int totalPaginas = (int) Math.ceil((double) totalRegistros / size);
-        long registrosASaltar = 1 + (long) (page - 1) * size; // +1 por el encabezado
+        long registrosASaltar = 1 + (long) (page - 1) * size;
 
-        // Leer solo la porción de datos necesaria
         try (Stream<String> lines = Files.lines(path, StandardCharsets.UTF_8)) {
             lines.skip(registrosASaltar)
                     .limit(size)
@@ -67,10 +77,12 @@ public class PersonaRepository {
                 personasPagina.size(),
                 page,
                 totalPaginas,
+                contenedorId,
+                contenedorNombre,
+                contenedorIp,
                 personasPagina);
     }
 
-    // 2. Método para editar un registro específico de forma segura
     public synchronized boolean editarPersona(String id, String nuevoNombre, String nuevoApellido) throws IOException {
         Path original = Paths.get(obtenerRutaArchivo());
         Path temporal = Paths.get(obtenerRutaArchivo() + ".tmp");
@@ -79,7 +91,6 @@ public class PersonaRepository {
         if (!Files.exists(original))
             return false;
 
-        // Leemos el original y escribimos en un temporal simultáneamente
         try (BufferedReader reader = Files.newBufferedReader(original, StandardCharsets.UTF_8);
                 BufferedWriter writer = Files.newBufferedWriter(temporal, StandardCharsets.UTF_8)) {
 
@@ -89,7 +100,6 @@ public class PersonaRepository {
                     continue;
 
                 String[] datos = linea.split(",");
-                // Si encontramos el ID, escribimos la nueva línea en vez de la vieja
                 if (!encontrado && datos.length >= 3 && datos[0].trim().equals(id)) {
                     writer.write(id + "," + nuevoNombre + "," + nuevoApellido + "\n");
                     encontrado = true;
@@ -99,12 +109,10 @@ public class PersonaRepository {
             }
         }
 
-        // Si se encontró y modificó, reemplazamos el archivo original (atómico en
-        // Linux/NFS)
         if (encontrado) {
             Files.move(temporal, original, StandardCopyOption.REPLACE_EXISTING);
         } else {
-            Files.deleteIfExists(temporal); // Limpiamos la basura si el ID no existía
+            Files.deleteIfExists(temporal);
         }
 
         return encontrado;

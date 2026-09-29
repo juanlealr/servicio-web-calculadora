@@ -39,6 +39,7 @@ public class CalculadoraController {
         return ResponseEntity.ok(new OperacionResponseDTO(num1, num2, operador, resultado, mensaje));
     }
 
+    // 1. ENDPOINT ORIGINAL (Lee personas.csv vía NFS)
     @GetMapping(value = "/personas")
     public ResponseEntity<PaginaResponseDTO> obtenerPersonasPaginadas(
             @RequestParam(defaultValue = "1") int page,
@@ -48,6 +49,17 @@ public class CalculadoraController {
         return ResponseEntity.ok(respuesta);
     }
 
+    // 2. NUEVO ENDPOINT (Lee directamente la Base de Datos PostgreSQL)
+    @GetMapping(value = "/personas-db")
+    public ResponseEntity<PaginaResponseDTO> obtenerPersonasDbPaginadas(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "100") int size) {
+
+        PaginaResponseDTO respuesta = personaService.obtenerPaginaDb(page, size);
+        return ResponseEntity.ok(respuesta);
+    }
+
+    // 3. EDITAR ORIGINAL (Modifica personas.csv vía NFS)
     @PutMapping(value = "/personas/editar")
     public ResponseEntity<Object> editarPersona(
             @RequestParam String id,
