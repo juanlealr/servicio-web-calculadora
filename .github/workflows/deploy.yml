@@ -1,0 +1,30 @@
+name: CI/CD Despliegue Automatico
+
+on:
+  push:
+    branches:
+      - main  # Cambia a 'master' si tu rama se llama así
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reconstruir y desplegar en Worker 1
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.WORKER1_IP }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            cd ~
+            docker compose up --build -d --force-recreate
+
+      - name: Reconstruir y desplegar en Worker 2
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.WORKER2_IP }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            cd ~
+            docker compose up --build -d --force-recreate
